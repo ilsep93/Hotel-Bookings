@@ -1,0 +1,109 @@
+---
+title: "Customer Segmentation"
+author: "Ilse Paniagua"
+date: "2/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(fpp3)
+library(magrittr)
+```
+
+## R Markdown
+
+```{r}
+hotels <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-11/hotels.csv')
+
+```
+
+```{r}
+summary(hotels)
+```
+
+The dataset has one row per booking.
+```{r}
+#Clean up country of origin
+#theory: international customers may rebook more frequently
+```
+
+Creating a date variable from year, month, and day.
+```{r}
+hotels %<>%  
+  mutate(date = glue::glue("{arrival_date_year}-{arrival_date_month}-{arrival_date_day_of_month}"),
+         date = parse_date(date, format = "%Y-%B-%d")) 
+```
+
+# City Hotels
+
+## Bookings
+
+Weekly seasonality is very strong. There are also some outliers in the remainder that are worth explorting. They have unusually high values at 
+```{r}
+#Timeseries decomposition
+hotels %>% 
+  filter(hotel == "City Hotel") %>%
+  select(date, everything()) %>% 
+  arrange(date) %>% 
+  count(date) %>% 
+  rename(daily_bookings = n) %>% 
+  tsibble::as_tsibble() %>% 
+  STL(daily_bookings ~ season(window = Inf)) %>%
+  autoplot()
+
+#Which dates have outlier values?
+hotels %>% 
+  filter(hotel == "City Hotel") %>%
+  select(date, everything()) %>% 
+  arrange(date) %>% 
+  count(date) %>% 
+  rename(daily_bookings = n) %>% 
+  tsibble::as_tsibble() %>% 
+  STL(daily_bookings ~ season(window = Inf)) %>%
+  select(date, daily_bookings, remainder) %>%
+  arrange(desc(remainder)) %>%
+  head(15)
+```
+
+## Cancelations
+
+How do cancelations vary over time?
+
+
+Which types of customers have a higher probability of canceling?
+
+
+# Resort Hotels
+
+## Bookings
+
+Remainder terms are lower for the resort hotel. The trend only varies by about 25 bookings over the series. 2015-12-05 was an outlier date for both the city and resport hotels.
+```{r}
+#Timeseries decomposition
+hotels %>% 
+  filter(hotel == "Resort Hotel") %>%
+  select(date, everything()) %>% 
+  arrange(date) %>% 
+  count(date) %>% 
+  rename(daily_bookings = n) %>% 
+  tsibble::as_tsibble() %>% 
+  STL(daily_bookings ~ season(window = Inf)) %>%
+  autoplot()
+
+#Which dates have outlier values?
+hotels %>% 
+  filter(hotel == "Resort Hotel") %>%
+  select(date, everything()) %>% 
+  arrange(date) %>% 
+  count(date) %>% 
+  rename(daily_bookings = n) %>% 
+  tsibble::as_tsibble() %>% 
+  STL(daily_bookings ~ season(window = Inf)) %>%
+  select(date, daily_bookings, remainder) %>%
+  arrange(desc(remainder)) %>%
+  head(15)
+```
+
+
